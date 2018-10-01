@@ -1,0 +1,85 @@
+---
+- hosts: localhost
+  tasks:
+  - name: include secrets
+    include_vars: secrets.yml
+
+  - name: install epel repository
+    become: yes
+    package:
+      name: epel-release
+      state: present
+  
+  - name: install dependencies
+    become: yes
+    package:
+      name: "{{ item }}"
+      state: present
+    with_items:
+    - git
+    - python-pip
+    - gcc
+    - python-devel
+    - mysql-devel
+  
+  - name: install python libraries
+    become: yes
+    pip:
+      name: "{{ item }}"
+      state: present
+    with_items:
+    - flask
+    - flask-sqlalchemy
+    - flask-migrate
+    - uwsgi
+    - MySQL-python
+  
+  - name: get the application code
+    become: yes
+    git:
+      repo: git@github.com:ansible-cookbook/phonebook-mysql.git
+      dest: /opt/phone-book
+      force: yes
+  
+  - name: upload systemd unit file
+    become: yes
+    copy:
+      src: phone-book.service
+      dest: /etc/systemd/system/phone-book.service
+
+  - name: upload app config file
+    template:
+      src: config.py
+      dest: /etc/systemd/system/phone-book.service
+
+  - name: upload app config file
+    template:
+      src: config.py
+      dest: /opt/phone-book/config.py
+  
+  - name: create phonebook database
+    mysql_db:
+      name: phonebook
+      state: present
+      login_host: "{{ mysql_host }}"
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+
+  - name: create app user for phonebook database
+    mysql_user:
+      name: app
+      password: "{{ mysql_app_password }}"
+      priv: 'phonebook.*:ALL'
+      host: "%"
+      state: present
+      login_host: "{{ mysql_host }}"
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+
+  - name: start phonebook
+    become: yes
+    systemd:
+      state: started
+      daemon_reload: yes
+      name: phone-book
+      enabled: yes

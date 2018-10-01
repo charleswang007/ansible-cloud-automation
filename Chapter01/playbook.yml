@@ -1,0 +1,6 @@
+---
+- hosts: localhost
+  tasks:
+    - name: get value
+      debug:
+        msg: "The value is: secret-value"
