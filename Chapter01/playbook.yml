@@ -1,6 +1,8 @@
 ---
 - hosts: localhost
   tasks:
+    - name: include secret
+      include_vars: secrets.yml
     - name: get value
       debug:
-        msg: "The value is: secret-value"
+        msg: "The value is: {{ mysecret }}"
